@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalkulator Pajak THR 2026 (Bootstrap 5)</title>
+    <!-- Menggunakan Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* Menyembunyikan panah atas/bawah pada input number */
+        input[type="text"]::-webkit-outer-spin-button,
+        input[type="text"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        body {
+            background-color: #f8f9fa;
+        }
+        .result-card {
+            display: none; /* Disembunyikan secara default */
+        }
+    </style>
+</head>
+<body>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10">
+            
+            <!-- Header Card -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-primary text-white text-center py-4">
+                    <h2 class="h4 mb-1 fw-bold">Kalkulator Pajak THR 2026</h2>
+                    <p class="mb-0 small opacity-75">Metode Tarif Efektif Rata-rata (TER) sesuai PMK 168/2023</p>
+                </div>
+                
+                <!-- Form Body -->
+                <div class="card-body p-4 p-md-5">
+                    <form id="thrForm" class="needs-validation" novalidate>
+                        
+                        <!-- Input Gaji Bulanan Bruto -->
+                        <div class="mb-4">
+                            <label for="gajiBruto" class="form-label fw-semibold">Gaji Bulanan Normal (Bruto)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-secondary">Rp</span>
+                                <input type="text" class="form-control format-rupiah" id="gajiBruto" placeholder="0" required>
+                                <div class="invalid-feedback">
+                                    Silakan masukkan nominal gaji normal Anda.
+                                </div>
+                            </div>
+                            <div class="form-text">Penghasilan rutin bulanan tanpa THR atau Bonus.</div>
+                        </div>
+
+                        <!-- Input Total Penghasilan Bruto Bulan Ini -->
+                        <div class="mb-4">
+                            <label for="totalBrutoInput" class="form-label fw-semibold">Total Penghasilan Bruto Bulan Ini</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-secondary">Rp</span>
+                                <input type="text" class="form-control format-rupiah" id="totalBrutoInput" placeholder="0" required>
+                                <div class="invalid-feedback">
+                                    Silakan masukkan total penghasilan bruto bulan ini.
+                                </div>
+                            </div>
+                            <div class="form-text">Total seluruh penghasilan yang diterima bulan ini (Gaji Normal + THR + Bonus/Lembur dll).</div>
+                        </div>
+
+                        <!-- Dropdown Status PTKP -->
+                        <div class="mb-4">
+                            <label for="statusPtkp" class="form-label fw-semibold">Status PTKP</label>
+                            <select class="form-select" id="statusPtkp" required>
+                                <option value="" selected disabled>Pilih Status PTKP...</option>
+                                <optgroup label="Kategori A">
+                                    <option value="TK/0">TK/0 (Tidak Kawin, 0 Tanggungan)</option>
+                                    <option value="TK/1">TK/1 (Tidak Kawin, 1 Tanggungan)</option>
+                                    <option value="K/0">K/0 (Kawin, 0 Tanggungan)</option>
+                                </optgroup>
+                                <optgroup label="Kategori B">
+                                    <option value="TK/2">TK/2 (Tidak Kawin, 2 Tanggungan)</option>
+                                    <option value="TK/3">TK/3 (Tidak Kawin, 3 Tanggungan)</option>
+                                    <option value="K/1">K/1 (Kawin, 1 Tanggungan)</option>
+                                    <option value="K/2">K/2 (Kawin, 2 Tanggungan)</option>
+                                </optgroup>
+                                <optgroup label="Kategori C">
+                                    <option value="K/3">K/3 (Kawin, 3 Tanggungan)</option>
+                                </optgroup>
+                            </select>
+                            <div class="invalid-feedback">
+                                Silakan pilih status PTKP Anda.
+                            </div>
+                        </div>
+
+                        <!-- Alert Error (Custom) -->
+                        <div id="errorAlert" class="alert alert-danger d-none" role="alert">
+                            Pastikan semua nilai yang dimasukkan lebih dari 0.
+                        </div>
+
+                        <!-- Tombol Hitung -->
+                        <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold shadow-sm">
+                            Hitung THR Bersih
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Area Hasil Perhitungan -->
+            <div id="resultCard" class="card shadow-sm border-0 result-card border-top border-primary border-4">
+                <div class="card-body p-4 p-md-5">
+                    <h4 class="fw-bold mb-4 text-primary">Hasil Perhitungan</h4>
+                    
+                    <!-- Tabel Hasil -->
+                    <div class="table-responsive mb-4">
+                        <table class="table table-bordered table-hover align-middle mb-0">
+                            <tbody>
+                                <tr>
+                                    <td class="text-secondary w-50">Tambahan Bruto / Nominal THR <br><small>(Total Bruto Bulan Ini - Gaji Normal)</small></td>
+                                    <td class="text-end fw-bold text-success" id="resNominalThr">Rp 0</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-secondary w-50">Total Penghasilan Bruto Bulan Ini <br><small>(Input User)</small></td>
+                                    <td class="text-end fw-bold" id="resTotalBruto">Rp 0</td>
+                                </tr>
+                                <tr class="table-light">
+                                    <td class="text-secondary">Kategori & Tarif TER Berlaku</td>
+                                    <td class="text-end fw-bold text-primary" id="resKategoriTer">-</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-secondary">Total PPh 21 Bulan Ini <br><small>(Berdasarkan Total Bruto & TER)</small></td>
+                                    <td class="text-end fw-bold text-danger" id="resPajakTotal">Rp 0</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-secondary">Estimasi PPh 21 atas Gaji Normal <br><small>(Tanpa THR/Tambahan)</small></td>
+                                    <td class="text-end fw-bold text-warning" id="resPajakGaji">Rp 0</td>
+                                </tr>
+                                <tr class="table-warning">
+                                    <td class="fw-bold">Potongan PPh 21 Khusus THR <br><small class="fw-normal">(Total PPh 21 - Estimasi PPh 21 Gaji)</small></td>
+                                    <td class="text-end fw-bold text-danger fs-5" id="resPajakThr">Rp 0</td>
+                                </tr>
+                                <tr class="table-success">
+                                    <td class="fw-bold text-success fs-5">THR Bersih Diterima</td>
+                                    <td class="text-end fw-bold text-success fs-4" id="resThrBersih">Rp 0</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Rincian Penjelasan Potongan -->
+                    <div class="alert alert-info border-info mb-0">
+                        <h6 class="fw-bold text-info-emphasis mb-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle-fill me-1" viewBox="0 0 16 16">
+                                <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm.93-9.412-1 4.705c-.07.34.029.533.304.533.194 0 .487-.07.686-.246l-.088.416c-.287.346-.92.598-1.465.598-.703 0-1.002-.422-.808-1.319l.738-3.468c.064-.293.006-.399-.287-.47l-.451-.081.082-.381 2.29-.287zM8 5.5a1 1 0 1 1 0-2 1 1 0 0 1 0 2z"/>
+                            </svg>
+                            Rincian Potongan PPh 21 (TER):
+                        </h6>
+                        <ul class="list-unstyled font-monospace small text-dark mb-0 opacity-75 lh-lg">
+                            <li id="detailGaji">1. PPh 21 Gaji: Rp 0 x 0% = Rp 0</li>
+                            <li id="detailTotal">2. PPh 21 Total: Rp 0 x 0% = Rp 0</li>
+                            <li id="detailSelisih" class="border-bottom border-info pb-2 mb-2">3. Potongan THR (Poin 2 - 1): Rp 0 - Rp 0 = Rp 0</li>
+                            <li id="detailBersih" class="fw-bold text-success">4. THR Bersih: Rp 0 - Rp 0 = Rp 0</li>
+                        </ul>
+                    </div>
+
+                </div>
+            </div>
+            
+            <!-- Footer Credit -->
+            <div class="text-center mt-4 mb-2 text-secondary small fw-medium">
+                Create By: IT Saurindotex - 2026
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap 5 JS Bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- JavaScript Logic -->
+<script>
+    // --- 1. DATA TARIF EFEKTIF RATA-RATA (TER) PMK 168/2023 ---
+    // Kategori A: TK/0, TK/1, K/0
+    const terA = [
+        { max: 5400000, rate: 0.0000 },
+        { max: 5650000, rate: 0.0025 },
+        { max: 5950000, rate: 0.0050 },
+        { max: 6300000, rate: 0.0075 },
+        { max: 6750000, rate: 0.0100 },
+        { max: 7500000, rate: 0.0125 },
+        { max: 8550000, rate: 0.0150 },
+        { max: 9650000, rate: 0.0175 },
+        { max: 10050000, rate: 0.0200 },
+        { max: 10350000, rate: 0.0225 },
+        { max: 10700000, rate: 0.0250 },
+        { max: 11050000, rate: 0.0300 },
+        { max: 11600000, rate: 0.0400 },
+        { max: 12500000, rate: 0.0500 },
+        { max: 13750000, rate: 0.0600 },
+        { max: 15100000, rate: 0.0700 },
+        { max: 16950000, rate: 0.0800 },
+        { max: 19750000, rate: 0.0900 },
+        { max: 24100000, rate: 0.1000 },
+        { max: 26400000, rate: 0.1100 },
+        { max: 28000000, rate: 0.1200 },
+        { max: 30100000, rate: 0.1300 },
+        { max: 32600000, rate: 0.1400 },
+        { max: 35400000, rate: 0.1500 },
+        { max: 38900000, rate: 0.1600 },
+        { max: 43000000, rate: 0.1700 },
+        { max: 47400000, rate: 0.1800 },
+        { max: 51200000, rate: 0.1900 },
+        { max: 55800000, rate: 0.2000 },
+        { max: 60400000, rate: 0.2100 },
+        { max: 66700000, rate: 0.2200 },
+        { max: 74500000, rate: 0.2300 },
+        { max: 83200000, rate: 0.2400 },
+        { max: 95600000, rate: 0.2500 },
+        { max: 110500000, rate: 0.2600 },
+        { max: 134000000, rate: 0.2700 },
+        { max: 169000000, rate: 0.2800 },
+        { max: 221000000, rate: 0.2900 },
+        { max: 390000000, rate: 0.3000 },
+        { max: 463000000, rate: 0.3100 },
+        { max: 561000000, rate: 0.3200 },
+        { max: 709000000, rate: 0.3300 },
+        { max: Infinity, rate: 0.3400 }
+    ];
+
+    // Kategori B: TK/2, TK/3, K/1, K/2
+    const terB = [
+        { max: 6200000, rate: 0.0000 },
+        { max: 6500000, rate: 0.0025 },
+        { max: 6850000, rate: 0.0050 },
+        { max: 7300000, rate: 0.0075 },
+        { max: 8550000, rate: 0.0100 },
+        { max: 9650000, rate: 0.0150 },
+        { max: 10050000, rate: 0.0175 },
+        { max: 10350000, rate: 0.0200 },
+        { max: 10700000, rate: 0.0225 },
+        { max: 11050000, rate: 0.0250 },
+        { max: 11600000, rate: 0.0300 },
+        { max: 12500000, rate: 0.0400 },
+        { max: 13750000, rate: 0.0500 },
+        { max: 15100000, rate: 0.0600 },
+        { max: 16950000, rate: 0.0700 },
+        { max: 19750000, rate: 0.0800 },
+        { max: 24100000, rate: 0.0900 },
+        { max: 26400000, rate: 0.1000 },
+        { max: 28000000, rate: 0.1100 },
+        { max: 30100000, rate: 0.1200 },
+        { max: 32600000, rate: 0.1300 },
+        { max: 35400000, rate: 0.1400 },
+        { max: 38900000, rate: 0.1500 },
+        { max: 43000000, rate: 0.1600 },
+        { max: 47400000, rate: 0.1700 },
+        { max: 51200000, rate: 0.1800 },
+        { max: 55800000, rate: 0.1900 },
+        { max: 60400000, rate: 0.2000 },
+        { max: 66700000, rate: 0.2100 },
+        { max: 74500000, rate: 0.2200 },
+        { max: 83200000, rate: 0.2300 },
+        { max: 95600000, rate: 0.2400 },
+        { max: 110500000, rate: 0.2500 },
+        { max: 134000000, rate: 0.2600 },
+        { max: 169000000, rate: 0.2700 },
+        { max: 221000000, rate: 0.2800 },
+        { max: 390000000, rate: 0.2900 },
+        { max: 463000000, rate: 0.3000 },
+        { max: 561000000, rate: 0.3100 },
+        { max: 709000000, rate: 0.3200 },
+        { max: 965000000, rate: 0.3300 },
+        { max: Infinity, rate: 0.3400 }
+    ];
+
+    // Kategori C: K/3
+    const terC = [
+        { max: 6600000, rate: 0.0000 },
+        { max: 6950000, rate: 0.0025 },
+        { max: 7350000, rate: 0.0050 },
+        { max: 7800000, rate: 0.0075 },
+        { max: 8850000, rate: 0.0100 },
+        { max: 9800000, rate: 0.0125 },
+        { max: 10500000, rate: 0.0150 },
+        { max: 10950000, rate: 0.0175 },
+        { max: 11200000, rate: 0.0200 },
+        { max: 11600000, rate: 0.0225 },
+        { max: 12050000, rate: 0.0250 },
+        { max: 12650000, rate: 0.0300 },
+        { max: 13650000, rate: 0.0400 },
+        { max: 14950000, rate: 0.0500 },
+        { max: 16400000, rate: 0.0600 },
+        { max: 18450000, rate: 0.0700 },
+        { max: 21850000, rate: 0.0800 },
+        { max: 26000000, rate: 0.0900 },
+        { max: 27700000, rate: 0.1000 },
+        { max: 29300000, rate: 0.1100 },
+        { max: 31450000, rate: 0.1200 },
+        { max: 33950000, rate: 0.1300 },
+        { max: 37100000, rate: 0.1400 },
+        { max: 41100000, rate: 0.1500 },
+        { max: 45800000, rate: 0.1600 },
+        { max: 49500000, rate: 0.1700 },
+        { max: 53800000, rate: 0.1800 },
+        { max: 58500000, rate: 0.1900 },
+        { max: 64000000, rate: 0.2000 },
+        { max: 71000000, rate: 0.2100 },
+        { max: 80000000, rate: 0.2200 },
+        { max: 90500000, rate: 0.2300 },
+        { max: 103000000, rate: 0.2400 },
+        { max: 118500000, rate: 0.2500 },
+        { max: 144000000, rate: 0.2600 },
+        { max: 183000000, rate: 0.2700 },
+        { max: 243000000, rate: 0.2800 },
+        { max: 432000000, rate: 0.2900 },
+        { max: 514000000, rate: 0.3000 },
+        { max: 623000000, rate: 0.3100 },
+        { max: 787000000, rate: 0.3200 },
+        { max: 1071000000, rate: 0.3300 },
+        { max: Infinity, rate: 0.3400 }
+    ];
+
+    // --- 2. FUNGSI UTILITAS (Format & Parsing Rupiah) ---
+    const formatRupiah = (angka) => {
+        let number_string = angka.toString().replace(/[^,\d]/g, ''),
+            split = number_string.split(','),
+            sisa = split[0].length % 3,
+            rupiah = split[0].substr(0, sisa),
+            ribuan = split[0].substr(sisa).match(/\d{3}/gi);
+
+        if (ribuan) {
+            let separator = sisa ? '.' : '';
+            rupiah += separator + ribuan.join('.');
+        }
+        return split[1] != undefined ? rupiah + ',' + split[1] : rupiah;
+    };
+
+    const parseRupiah = (str) => {
+        if (!str) return 0;
+        return parseInt(str.replace(/\./g, '')) || 0;
+    };
+
+    const displayRupiah = (angka) => {
+        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(Math.round(angka));
+    };
+
+    // Event listener untuk auto-format input saat mengetik
+    document.querySelectorAll('.format-rupiah').forEach(input => {
+        input.addEventListener('keyup', function(e) {
+            this.value = formatRupiah(this.value);
+        });
+    });
+
+    // --- 3. LOGIKA PAJAK TER ---
+    const getKategoriTer = (statusPtkp) => {
+        const listA = ['TK/0', 'TK/1', 'K/0'];
+        const listB = ['TK/2', 'TK/3', 'K/1', 'K/2'];
+        const listC = ['K/3'];
+
+        if (listA.includes(statusPtkp)) return { id: 'A', data: terA };
+        if (listB.includes(statusPtkp)) return { id: 'B', data: terB };
+        if (listC.includes(statusPtkp)) return { id: 'C', data: terC };
+        return null;
+    };
+
+    const getRateTer = (bruto, kategoriData) => {
+        for (let i = 0; i < kategoriData.length; i++) {
+            if (bruto <= kategoriData[i].max) {
+                return kategoriData[i].rate;
+            }
+        }
+        return 0; 
+    };
+
+    // --- 4. PENANGANAN FORM (Bootstrap Validation) ---
+    const form = document.getElementById('thrForm');
+    
+    form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const errorAlert = document.getElementById('errorAlert');
+        errorAlert.classList.add('d-none');
+
+        // Cek validasi bawaan HTML5 & Bootstrap
+        if (!form.checkValidity()) {
+            form.classList.add('was-validated');
+            return;
+        }
+
+        // Ambil Nilai
+        const gajiBruto = parseRupiah(document.getElementById('gajiBruto').value);
+        const totalBrutoBulanIni = parseRupiah(document.getElementById('totalBrutoInput').value);
+        const statusPtkp = document.getElementById('statusPtkp').value;
+
+        // Validasi Kustom (Harus lebih dari 0 dan Total tidak boleh lebih kecil dari Gaji Normal)
+        if (gajiBruto <= 0 || totalBrutoBulanIni <= 0) {
+            errorAlert.textContent = "Pastikan semua nilai yang dimasukkan lebih dari 0.";
+            errorAlert.classList.remove('d-none');
+            return;
+        }
+        
+        if (totalBrutoBulanIni < gajiBruto) {
+            errorAlert.textContent = "Total Penghasilan Bruto Bulan Ini tidak boleh lebih kecil dari Gaji Bulanan Normal.";
+            errorAlert.classList.remove('d-none');
+            return;
+        }
+
+        form.classList.add('was-validated');
+
+        // PERHITUNGAN
+        const kategori = getKategoriTer(statusPtkp);
+        
+        // Nominal THR (didapat dari selisih Total Penghasilan Bruto Bulan Ini - Gaji Normal)
+        const nominalThr = totalBrutoBulanIni - gajiBruto; 
+
+        // PPh 21 Total
+        const rateTerTotal = getRateTer(totalBrutoBulanIni, kategori.data);
+        const pajakTotalBulanIni = totalBrutoBulanIni * rateTerTotal;
+
+        // PPh 21 Gaji Saja
+        const rateTerGaji = getRateTer(gajiBruto, kategori.data);
+        const pajakAtasGaji = gajiBruto * rateTerGaji;
+
+        // Potongan Khusus THR (Selisih)
+        const pajakAtasThr = pajakTotalBulanIni - pajakAtasGaji;
+
+        // THR Bersih
+        const thrBersih = nominalThr - pajakAtasThr;
+
+        // --- 5. TAMPILKAN KE TABEL HASIL ---
+        document.getElementById('resNominalThr').textContent = displayRupiah(nominalThr);
+        document.getElementById('resTotalBruto').textContent = displayRupiah(totalBrutoBulanIni);
+        document.getElementById('resKategoriTer').textContent = `Kategori ${kategori.id} (${(rateTerTotal * 100).toFixed(2)}%)`;
+        document.getElementById('resPajakTotal').textContent = displayRupiah(pajakTotalBulanIni);
+        document.getElementById('resPajakGaji').textContent = displayRupiah(pajakAtasGaji);
+        document.getElementById('resPajakThr').textContent = displayRupiah(pajakAtasThr);
+        document.getElementById('resThrBersih').textContent = displayRupiah(thrBersih);
+
+        // --- 6. TAMPILKAN RINCIAN MATEMATIKA ---
+        document.getElementById('detailGaji').textContent = `1. PPh 21 Gaji Normal: ${displayRupiah(gajiBruto)} x ${(rateTerGaji * 100).toFixed(2)}% = ${displayRupiah(pajakAtasGaji)}`;
+        document.getElementById('detailTotal').textContent = `2. PPh 21 Total Bulan Ini: ${displayRupiah(totalBrutoBulanIni)} x ${(rateTerTotal * 100).toFixed(2)}% = ${displayRupiah(pajakTotalBulanIni)}`;
+        document.getElementById('detailSelisih').textContent = `3. Potongan PPh dari THR/Tambahan: ${displayRupiah(pajakTotalBulanIni)} - ${displayRupiah(pajakAtasGaji)} = ${displayRupiah(pajakAtasThr)}`;
+        document.getElementById('detailBersih').textContent = `4. THR Bersih Diterima: ${displayRupiah(nominalThr)} - ${displayRupiah(pajakAtasThr)} = ${displayRupiah(thrBersih)}`;
+
+        // Tampilkan Card & Scroll
+        const resultCard = document.getElementById('resultCard');
+        resultCard.style.display = 'block';
+        resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, false);
+</script>
+</body>
+</html>
